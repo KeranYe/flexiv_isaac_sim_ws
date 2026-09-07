@@ -6,3 +6,5 @@ extscache/
 cache/
 *.log
 __pycache__
+
+*dev_plan*/

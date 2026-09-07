@@ -7,4 +7,11 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
 from isaacsim.robot.manipulators.examples.flexiv.flexiv_serial import FlexivSerial
+from isaacsim.robot.manipulators.examples.flexiv.flexiv_serial_newton import FlexivSerialNewton
 from isaacsim.robot.manipulators.examples.flexiv.kinematics_solver import KinematicsSolver
+
+__all__ = [
+    "FlexivSerial",
+    "FlexivSerialNewton",
+    "KinematicsSolver",
+]

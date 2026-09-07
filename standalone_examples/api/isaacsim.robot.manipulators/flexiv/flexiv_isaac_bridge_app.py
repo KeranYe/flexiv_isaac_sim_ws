@@ -67,38 +67,54 @@ from isaacsim.core.utils.extensions import enable_extension
 
 enable_extension("isaacsim.robot.manipulators.examples")
 
-if args.physics_backend == "newton":
-    enable_extension("isaacsim.core.simulation_manager")
-    enable_extension("isaacsim.physics.newton")
-    enable_extension("isaacsim.physics.newton.tensors")
+# if args.physics_backend == "newton":
+#     enable_extension("isaacsim.core.simulation_manager")
+#     enable_extension("isaacsim.physics.newton")
+#     enable_extension("isaacsim.physics.newton.tensors")
 
-    # Allow Kit to finish loading/registering Newton
-    simulation_app.update()
+#     # Allow Kit to finish loading/registering Newton
+#     simulation_app.update()
 
-    from isaacsim.core.simulation_manager import SimulationManager
+#     from isaacsim.core.simulation_manager import SimulationManager
 
-    print(
-        "Available physics engines:",
-        SimulationManager.get_available_physics_engines(verbose=True),
-    )
+#     print(
+#         "Available physics engines:",
+#         SimulationManager.get_available_physics_engines(verbose=True),
+#     )
 
-    success = SimulationManager.switch_physics_engine(
-        "newton",
-        verbose=True,
-    )
+#     success = SimulationManager.switch_physics_engine(
+#         "newton",
+#         verbose=True,
+#     )
 
-    if not success:
-        raise RuntimeError("Failed to switch physics backend to Newton")
+#     if not success:
+#         raise RuntimeError("Failed to switch physics backend to Newton")
 
-    print(
-        "Active physics engine:",
-        SimulationManager.get_active_physics_engine(),
-    )
+#     print(
+#         "Active physics engine:",
+#         SimulationManager.get_active_physics_engine(),
+#     )
 
+import importlib
 from isaacsim.core.api import World
 from isaacsim.core.utils.stage import add_reference_to_stage, get_current_stage
 from isaacsim.sensors.camera import Camera
-from isaacsim.robot.manipulators.examples.flexiv import FlexivSerial
+
+# Load our workspace copy of FlexivSerial directly by absolute path.  isaac-py
+# caches isaacsim.robot.manipulators.examples in sys.modules during startup,
+# so a normal package import would hit the stale Isaac install copy that lacks
+# our flexiv_serial_newton module.
+_flexiv_dir = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..",
+                 "exts", "isaacsim.robot.manipulators.examples",
+                 "isaacsim", "robot", "manipulators", "examples", "flexiv")
+)
+_fspec = importlib.util.spec_from_file_location(
+    "flexiv_serial", os.path.join(_flexiv_dir, "flexiv_serial.py")
+)
+_fmod = importlib.util.module_from_spec(_fspec)
+_fspec.loader.exec_module(_fmod)
+FlexivSerial = _fmod.FlexivSerial
 from isaacsim.robot.manipulators.grippers.parallel_gripper import ParallelGripper
 from pxr import Usd, UsdPhysics, Sdf, Gf
 
