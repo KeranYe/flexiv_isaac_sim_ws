@@ -42,7 +42,18 @@ if flexivsimplugin.__version__ != COMPATIBLE_SIM_PLUGIN_VER:
 
 # Load config file
 argparser = ArgumentParser()
-argparser.add_argument("--config", required=True, help="Path to YAML config file")
+argparser.add_argument(
+    "--config", 
+    required=True, 
+    help="Path to YAML config file"
+)
+argparser.add_argument(
+    "--physics-backend",
+    choices=["physx", "newton"],
+    default="physx",
+    help="Isaac Sim physics backend",
+)
+
 args = argparser.parse_args()
 
 # Start simulation main window
@@ -55,6 +66,34 @@ simulation_app = SimulationApp({"headless": False, "width": 1920, "height": 1080
 from isaacsim.core.utils.extensions import enable_extension
 
 enable_extension("isaacsim.robot.manipulators.examples")
+
+if args.physics_backend == "newton":
+    enable_extension("isaacsim.core.simulation_manager")
+    enable_extension("isaacsim.physics.newton")
+    enable_extension("isaacsim.physics.newton.tensors")
+
+    # Allow Kit to finish loading/registering Newton
+    simulation_app.update()
+
+    from isaacsim.core.simulation_manager import SimulationManager
+
+    print(
+        "Available physics engines:",
+        SimulationManager.get_available_physics_engines(verbose=True),
+    )
+
+    success = SimulationManager.switch_physics_engine(
+        "newton",
+        verbose=True,
+    )
+
+    if not success:
+        raise RuntimeError("Failed to switch physics backend to Newton")
+
+    print(
+        "Active physics engine:",
+        SimulationManager.get_active_physics_engine(),
+    )
 
 from isaacsim.core.api import World
 from isaacsim.core.utils.stage import add_reference_to_stage, get_current_stage
@@ -151,7 +190,14 @@ class BridgeRunner(object):
 
         # Enable GPU dynamics if specified
         if config.get("gpu_dynamics", False):
-            self._world.get_physics_context().enable_gpu_dynamics(True)
+            if args.physics_backend == "physx":
+                self._world.get_physics_context().enable_gpu_dynamics(True)
+            else:
+                self._logger.warn(
+                    "gpu_dynamics is a PhysX option; ignoring it for Newton"
+                )
+        # if config.get("gpu_dynamics", False):
+        #     self._world.get_physics_context().enable_gpu_dynamics(True)
 
         # Load environment and reset world
         env_usd = config.get("env_usd", "")
@@ -472,17 +518,19 @@ class BridgeRunner(object):
 def resolve_usd_paths(config):
     """Resolve relative ``usd`` / ``env_usd`` paths in the config.
 
-    Relative paths are resolved against the Isaac Sim installation root (the
-    ``ISAAC_PATH`` environment variable, set by ``python.sh``), so the default
-    config works regardless of the current working directory. Absolute paths are
+    Relative paths are resolved against the Flexiv workspace root,
+    so the default config works regardless of the current working directory. Absolute paths are
     left unchanged. This lets the shipped config point at the bundled example
     assets under ``extsDeprecated/`` without hardcoding a machine-specific path.
     """
-    isaac_root = os.environ.get("ISAAC_PATH", "")
+    # Workspace root is 4 directories up from this script.
+    _WORKSPACE_ROOT = os.path.abspath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..")
+    )
 
     def resolve(path):
         if path and not os.path.isabs(path):
-            return os.path.join(isaac_root, path)
+            return os.path.join(_WORKSPACE_ROOT, path)
         return path
 
     if config.get("env_usd"):

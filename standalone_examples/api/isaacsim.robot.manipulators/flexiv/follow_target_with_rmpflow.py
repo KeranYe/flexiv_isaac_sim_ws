@@ -27,8 +27,8 @@ from isaacsim.robot.manipulators.examples.flexiv.tasks import FollowTarget
 
 # Robot USD to load. Accept an optional path as the first CLI argument (matching
 # the README's usage), and default to the SimReady Rizon4 asset shipped with this
-# extension under extsDeprecated/. Relative paths are resolved against the Isaac
-# Sim installation root (ISAAC_PATH, set by python.sh) so the default works from
+# extension under extsDeprecated/. Relative paths are resolved against the Flexiv
+# workspace root (derived from the location of this script) so the default works from
 # any working directory.
 import os
 import sys
@@ -37,9 +37,15 @@ _DEFAULT_USD = (
     "extsDeprecated/isaacsim.robot.manipulators.examples/"
     "data/flexiv/Rizon4/Rizon4.usda"
 )
+
+# Workspace root is 4 directories up from this script.
+_WORKSPACE_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..")
+)
+
 usd_path = sys.argv[1] if len(sys.argv) > 1 else _DEFAULT_USD
 if not os.path.isabs(usd_path):
-    usd_path = os.path.join(os.environ.get("ISAAC_PATH", ""), usd_path)
+    usd_path = os.path.join(_WORKSPACE_ROOT, usd_path)
 
 my_world = World(stage_units_in_meters=1.0)
 my_task = FollowTarget(name="flexiv_follow_target", usd_path=usd_path)
