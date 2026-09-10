@@ -1,0 +1,49 @@
+# Flexiv Newton Bridge Config — Rizon10 only (no gripper, no workpiece).
+#
+# Tuning guide:
+#   - alpha/beta: Lower = smoother feedback to Elements (hides Newton dynamics)
+#     but more lag. Start low (0.3-0.5 for q, 0.5-0.7 for dq) and increase
+#     gradually if tracking seems sluggish.
+#   - settle_duration_sec: Time of settling after Elements connects before applying
+#     real Element commands. PD hold stays ACTIVE during this period with gravity
+#     compensation to prevent drift. After settling, re-teleport to home then
+#     switch to effort mode.
+#   - tau_limits_per_joint: Actual URDF effort limits (Nm). Safety caps for torque.
+#     Rizon10 URDF max: [261, 261, 123, 123, 57, 57, 57]
+#   - kd_damp: Higher = more velocity damping (suppresses oscillation).
+#   - hold_kp/hold_kd: Used when Elements disconnects OR during settling.
+
+robots:
+  - name: "Rizon10"
+    serial_number: "Rizon10-ThV7QV"
+    urdf: "/home/keran/joyson_ws/GripperSense/description/Rizon10/urdf/Rizon10-ThV7QV.urdf"
+    arm_dof: 7
+    has_ft_sensor: false
+
+# Home pose for reset and position-hold target.
+home_q: [0.0, -0.698132, 0.0, 1.5708, 0.0, 0.698132, 0.0]
+
+control:
+  # --- Feedback blending (mirrors Mujoco bridge approach) ---
+  alpha: 0.5                  # q blend weight
+  beta: 0.0                   # dq blend weight
+
+  # --- Settling duration (seconds after Elements connects) ---
+  # PD hold with gravity compensation stays active during settling.
+  # After this period, re-teleport to home then switch to effort mode.
+  settle_duration_sec: 5.0
+
+  # --- Effort-mode tuning ---
+  # Actual URDF joint effort limits (Nm).
+  tau_limits_per_joint: [261.0, 261.0, 123.0, 123.0, 57.0, 57.0, 57.0]
+
+  # Velocity damping in Nm/(rad/s). Adds -Kd*dq to each torque command.
+  kd_damp: 10.0
+
+  # --- Position-hold PD gains (used during settling AND when disconnected) ---
+  hold_kp: 2000.0              # Nm/rad
+  hold_kd: 20.0               # Nm/(rad/s)
+  hold_max_torque: 40.0       # per-joint clip
+
+  # --- Simulation gravity ---
+  disable_gravity: false      # Real gravity enabled (Elements compensation matches physics)
